@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Порхающая Птичка — Ретро Игра</title>
+    <!-- Google Font for Retro Pixel Art Style -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background-color: #0f172a;
+            font-family: 'Press Start 2P', monospace, sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+            overflow: hidden;
+        }
+
+        /* Crisp canvas pixel rendering */
+        canvas {
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+        }
+
+        /* Retro button styling with press effects */
+        .btn-retro-green {
+            background: linear-gradient(to bottom, #4ade80, #16a34a);
+            border: 3px solid #fef08a;
+            box-shadow: 0 5px 0 #15803d, 0 8px 10px rgba(0,0,0,0.5);
+            transition: all 0.05s ease;
+        }
+        .btn-retro-green:active {
+            transform: translateY(3px);
+            box-shadow: 0 2px 0 #15803d, 0 4px 6px rgba(0,0,0,0.5);
+        }
+
+        .btn-retro-red {
+            background: linear-gradient(to bottom, #f87171, #dc2626);
+            border: 3px solid #fef08a;
+            box-shadow: 0 5px 0 #991b1b, 0 8px 10px rgba(0,0,0,0.5);
+            transition: all 0.05s ease;
+        }
+        .btn-retro-red:active {
+            transform: translateY(3px);
+            box-shadow: 0 2px 0 #991b1b, 0 4px 6px rgba(0,0,0,0.5);
+        }
+
+        .btn-retro-blue {
+            background: linear-gradient(to bottom, #38bdf8, #0284c7);
+            border: 3px solid #e0f2fe;
+            box-shadow: 0 5px 0 #0369a1, 0 8px 10px rgba(0,0,0,0.5);
+            transition: all 0.05s ease;
+        }
+        .btn-retro-blue:active {
+            transform: translateY(3px);
+            box-shadow: 0 2px 0 #0369a1, 0 4px 6px rgba(0,0,0,0.5);
+        }
+
+        /* Hide scrollbars */
+        ::-webkit-scrollbar { display: none; }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen text-white relative select-none p-2 sm:p-4">
+
+    <!-- Main Responsive Game Container -->
+    <div id="game-container" class="relative w-full max-w-sm aspect-[9/16] max-h-[92vh] flex flex-col items-center justify-center overflow-hidden rounded-2xl border-4 border-slate-700 bg-black">
+        
+        <!-- Game Canvas -->
+        <canvas id="gameCanvas" class="w-full h-full block"></canvas>
+
+        <!-- UI Overlay: Start & Mode Selection Screen -->
+        <div id="start-screen" class="absolute inset-0 flex flex-col items-center justify-between p-5 bg-black/40 backdrop-blur-[2px] z-10">
+            <div class="mt-6 text-center">
+                <h1 class="text-xl sm:text-2xl font-black text-yellow-300 drop-shadow-[0_4px_0_#b45309] leading-snug tracking-wider uppercase">
+                    ПОРХАЮЩАЯ<br><span class="text-green-400 drop-shadow-[0_4px_0_#15803d]">ПТИЧКА</span>
+                </h1>
+                <p class="text-[9px] text-sky-200 mt-2 font-bold tracking-wider">ВЫБЕРИТЕ РЕЖИМ ИГРЫ</p>
+            </div>
+
+            <!-- Mode Selector Buttons -->
+            <div class="flex flex-col items-center gap-3 w-full px-2">
+                <button id="mode-chill-btn" class="btn-retro-green text-[10px] sm:text-xs px-4 py-3 rounded-xl font-bold text-white tracking-wider cursor-pointer uppercase w-full flex flex-col items-center justify-center gap-1">
+                    <span>СПОКОЙНЫЙ 🐣</span>
+                    <span class="text-[8px] opacity-90 font-normal lowercase text-yellow-100">(широкие трубы, плавно)</span>
+                </button>
+
+                <button id="mode-insane-btn" class="btn-retro-red text-[10px] sm:text-xs px-4 py-3 rounded-xl font-bold text-white tracking-wider cursor-pointer uppercase w-full flex flex-col items-center justify-center gap-1">
+                    <span>БЕЗУМНЫЙ ⚡</span>
+                    <span class="text-[8px] opacity-90 font-normal lowercase text-amber-100">(классический хардкор)</span>
+                </button>
+
+                <div class="bg-slate-900/80 border border-slate-600/80 rounded-lg p-2.5 text-center mt-1 w-full">
+                    <p class="text-[8px] sm:text-[9px] leading-relaxed text-slate-300">
+                        Управление: <span class="text-yellow-300">ПРОБЕЛ</span>, <span class="text-yellow-300">КЛИК</span> или <span class="text-yellow-300">ТАП</span>
+                    </p>
+                </div>
+            </div>
+
+            <!-- High Scores Box -->
+            <div class="mb-2 text-[9px] text-yellow-300 bg-slate-900/90 px-3 py-2 rounded-xl border border-yellow-500/40 text-center w-full max-w-[240px] flex justify-around">
+                <div>🐣 <span id="high-score-chill">0</span></div>
+                <div class="text-slate-500">|</div>
+                <div>⚡ <span id="high-score-insane">0</span></div>
+            </div>
+        </div>
+
+        <!-- UI Overlay: Playing HUD Screen -->
+        <div id="hud-screen" class="absolute inset-0 pointer-events-none z-10 hidden flex flex-col justify-between p-4">
+            <div class="flex justify-between items-start w-full">
+                <!-- Score Counter & Mode indicator -->
+                <div class="flex flex-col">
+                    <div class="text-2xl sm:text-3xl text-white font-black drop-shadow-[0_3px_0_#000]">
+                        <span id="current-score">0</span>
+                    </div>
+                    <div id="hud-mode-tag" class="text-[8px] text-yellow-300 drop-shadow-[0_1px_0_#000]">
+                        СПОКОЙНЫЙ
+                    </div>
+                </div>
+
+                <!-- Sound and Music Toggles -->
+                <div class="pointer-events-auto flex gap-1.5">
+                    <button id="toggle-music" class="bg-slate-900/80 hover:bg-slate-800 text-[9px] border border-slate-500 rounded-lg p-1.5 text-white active:scale-95 transition">
+                        🎵 <span id="music-status">ВКЛ</span>
+                    </button>
+                    <button id="toggle-sfx" class="bg-slate-900/80 hover:bg-slate-800 text-[9px] border border-slate-500 rounded-lg p-1.5 text-white active:scale-95 transition">
+                        🔊 <span id="sfx-status">ВКЛ</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- UI Overlay: Game Over Screen -->
+        <div id="gameover-screen" class="absolute inset-0 flex flex-col items-center justify-center p-5 bg-black/70 backdrop-blur-sm z-20 hidden">
+            <div class="bg-amber-100 border-4 border-amber-800 rounded-2xl p-4 sm:p-5 w-full max-w-[280px] text-slate-900 shadow-2xl flex flex-col items-center">
+                <h2 class="text-sm sm:text-base text-red-600 font-black mb-3 drop-shadow-[0_2px_0_#000] tracking-wider uppercase text-center">
+                    ИГРА ОКОНЧЕНА!
+                </h2>
+
+                <!-- Medal & Score Board -->
+                <div class="w-full bg-amber-200/90 border-2 border-amber-700 rounded-xl p-3 mb-4 flex items-center justify-between">
+                    <div class="flex flex-col items-center">
+                        <span class="text-[7px] text-amber-900 font-bold mb-1 uppercase">МЕДАЛЬ</span>
+                        <div id="medal-icon" class="w-9 h-9 rounded-full border-2 border-amber-900 flex items-center justify-center text-base bg-yellow-400">
+                            🥉
+                        </div>
+                    </div>
+                    <div class="text-right flex flex-col gap-1">
+                        <div>
+                            <div class="text-[7px] text-amber-900 font-bold uppercase">СЧЁТ</div>
+                            <div id="final-score" class="text-base font-black text-amber-950">0</div>
+                        </div>
+                        <div>
+                            <div class="text-[7px] text-amber-900 font-bold uppercase">РЕКОРД</div>
+                            <div id="final-high-score" class="text-sm font-black text-emerald-800">0</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action Buttons: Restart & Main Menu -->
+                <div class="flex flex-col gap-2.5 w-full">
+                    <button id="restart-btn" class="btn-retro-green text-[10px] sm:text-xs py-3 rounded-xl font-bold text-white tracking-wider cursor-pointer uppercase w-full">
+                        НАЧАТЬ ЗАНОВО
+                    </button>
+                    <button id="menu-btn" class="btn-retro-blue text-[10px] sm:text-xs py-3 rounded-xl font-bold text-white tracking-wider cursor-pointer uppercase w-full">
+                        ГЛАВНОЕ МЕНЮ
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Web Audio API Audio Synthesizer for retro effects and melody
+        class SoundEngine {
+            constructor() {
+                this.ctx = null;
+                this.musicMuted = false;
+                this.sfxMuted = false;
+                this.isPlayingMusic = false;
+                this.musicInterval = null;
+                this.noteIndex = 0;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    this.ctx = new AudioContext();
+                }
+                if (this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            }
+
+            playFlap() {
+                if (this.sfxMuted || !this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(320, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(650, this.ctx.currentTime + 0.08);
+
+                gain.gain.setValueAtTime(0.12, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.08);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.08);
+            }
+
+            playScore() {
+                if (this.sfxMuted || !this.ctx) return;
+                const now = this.ctx.currentTime;
+                [523.25, 659.25, 783.99].forEach((freq, idx) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(freq, now + idx * 0.05);
+
+                    gain.gain.setValueAtTime(0.1, now + idx * 0.05);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.05 + 0.1);
+
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+
+                    osc.start(now + idx * 0.05);
+                    osc.stop(now + idx * 0.05 + 0.1);
+                });
+            }
+
+            playHit() {
+                if (this.sfxMuted || !this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(200, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(40, this.ctx.currentTime + 0.3);
+
+                gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.3);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.3);
+            }
+
+            startMusic() {
+                if (this.isPlayingMusic || !this.ctx) return;
+                this.isPlayingMusic = true;
+                this.noteIndex = 0;
+
+                const melody = [
+                    261.63, 329.63, 392.00, 523.25, 392.00, 329.63,
+                    293.66, 349.23, 440.00, 587.33, 440.00, 349.23,
+                    261.63, 329.63, 392.00, 523.25, 440.00, 392.00,
+                    246.94, 293.66, 392.00, 493.88, 392.00, 293.66
+                ];
+
+                this.musicInterval = setInterval(() => {
+                    if (this.musicMuted || !this.isPlayingMusic) return;
+
+                    const freq = melody[this.noteIndex % melody.length];
+                    this.noteIndex++;
+
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+
+                    gain.gain.setValueAtTime(0.025, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.2);
+
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + 0.2);
+                }, 260);
+            }
+
+            stopMusic() {
+                this.isPlayingMusic = false;
+                if (this.musicInterval) {
+                    clearInterval(this.musicInterval);
+                    this.musicInterval = null;
+                }
+            }
+        }
+
+        const soundEngine = new SoundEngine();
+
+        // Canvas Setup & Aspect Ratio (144x256 pixel resolution)
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const GAME_WIDTH = 144;
+        const GAME_HEIGHT = 256;
+        canvas.width = GAME_WIDTH;
+        canvas.height = GAME_HEIGHT;
+
+        // UI References
+        const startScreen = document.getElementById('start-screen');
+        const hudScreen = document.getElementById('hud-screen');
+        const gameoverScreen = document.getElementById('gameover-screen');
+        const modeChillBtn = document.getElementById('mode-chill-btn');
+        const modeInsaneBtn = document.getElementById('mode-insane-btn');
+        const restartBtn = document.getElementById('restart-btn');
+        const menuBtn = document.getElementById('menu-btn');
+        const currentScoreEl = document.getElementById('current-score');
+        const hudModeTagEl = document.getElementById('hud-mode-tag');
+        const highScoreChillEl = document.getElementById('high-score-chill');
+        const highScoreInsaneEl = document.getElementById('high-score-insane');
+        const finalScoreEl = document.getElementById('final-score');
+        const finalHighScoreEl = document.getElementById('final-high-score');
+        const medalIconEl = document.getElementById('medal-icon');
+        const toggleMusicBtn = document.getElementById('toggle-music');
+        const toggleSfxBtn = document.getElementById('toggle-sfx');
+        const musicStatusEl = document.getElementById('music-status');
+        const sfxStatusEl = document.getElementById('sfx-status');
+
+        // Difficulty Presets
+        const MODE_SETTINGS = {
+            CHILL: {
+                name: 'СПОКОЙНЫЙ',
+                gravity: 0.16,
+                lift: -3.2,
+                baseGap: 72,
+                baseSpeed: 0.85,
+                spawnInterval: 140,
+                padding: 3, // Forgiving hitbox
+                storageKey: 'flappy_ru_chill_high'
+            },
+            INSANE: {
+                name: 'БЕЗУМНЫЙ',
+                gravity: 0.25,
+                lift: -4.3,
+                baseGap: 52,
+                baseSpeed: 1.25,
+                spawnInterval: 95,
+                padding: 1, // Tight hitbox
+                storageKey: 'flappy_ru_insane_high'
+            }
+        };
+
+        // Game State Variables
+        let currentMode = 'CHILL';
+        let gameState = 'START'; // START, PLAYING, GAMEOVER
+        let score = 0;
+        let frameCount = 0;
+
+        // High Score Management
+        function getHighScore(modeKey) {
+            return parseInt(localStorage.getItem(MODE_SETTINGS[modeKey].storageKey) || '0', 10);
+        }
+
+        function updateHighScoreDisplays() {
+            highScoreChillEl.textContent = getHighScore('CHILL');
+            highScoreInsaneEl.textContent = getHighScore('INSANE');
+        }
+        updateHighScoreDisplays();
+
+        // Bird Entity
+        const bird = {
+            x: 32,
+            y: 120,
+            width: 12,
+            height: 10,
+            velocity: 0,
+            rotation: 0,
+            frame: 0,
+            
+            flap() {
+                const config = MODE_SETTINGS[currentMode];
+                this.velocity = config.lift;
+                soundEngine.playFlap();
+                createParticles(this.x, this.y + 5, 4, '#ffffff');
+            },
+
+            update() {
+                const config = MODE_SETTINGS[currentMode];
+                this.velocity += config.gravity;
+                this.y += this.velocity;
+
+                if (this.velocity < 0) {
+                    this.rotation = -0.25;
+                } else {
+                    this.rotation += 0.04;
+                    if (this.rotation > 0.8) this.rotation = 0.8;
+                }
+
+                if (frameCount % 6 === 0) {
+                    this.frame = (this.frame + 1) % 3;
+                }
+            },
+
+            draw() {
+                ctx.save();
+                ctx.translate(Math.floor(this.x + this.width / 2), Math.floor(this.y + this.height / 2));
+                ctx.rotate(this.rotation);
+
+                const bx = -this.width / 2;
+                const by = -this.height / 2;
+
+                // Bird Color Scheme
+                const bodyColor = currentMode === 'CHILL' ? '#facc15' : '#ef4444';
+                const bellyColor = currentMode === 'CHILL' ? '#fef08a' : '#fca5a5';
+                const wingColor = currentMode === 'CHILL' ? '#eab308' : '#b91c1c';
+
+                // Yellow/Red Body
+                ctx.fillStyle = bodyColor;
+                ctx.fillRect(bx + 2, by, 8, 10);
+                ctx.fillRect(bx, by + 2, 12, 6);
+
+                // Feather Belly
+                ctx.fillStyle = bellyColor;
+                ctx.fillRect(bx + 2, by + 6, 6, 3);
+
+                // Eye
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(bx + 7, by + 1, 4, 4);
+                ctx.fillStyle = '#000000';
+                ctx.fillRect(bx + 9, by + 2, 2, 2);
+
+                // Beak
+                ctx.fillStyle = '#f97316';
+                ctx.fillRect(bx + 9, by + 5, 5, 3);
+                ctx.fillStyle = '#ea580c';
+                ctx.fillRect(bx + 9, by + 7, 5, 1);
+
+                // Wing
+                ctx.fillStyle = wingColor;
+                if (this.frame === 0) {
+                    ctx.fillRect(bx + 1, by + 4, 5, 3);
+                } else if (this.frame === 1) {
+                    ctx.fillRect(bx + 1, by + 1, 5, 3);
+                } else {
+                    ctx.fillRect(bx + 1, by + 6, 5, 3);
+                }
+
+                ctx.restore();
+            }
+        };
+
+        // Pipes Obstacles
+        let pipes = [];
+        const pipeWidth = 24;
+
+        function spawnPipe() {
+            const config = MODE_SETTINGS[currentMode];
+            // Gap slowly shrinks slightly with each point, up to a minimum limit
+            const minGap = currentMode === 'CHILL' ? 58 : 44;
+            const gap = Math.max(minGap, config.baseGap - Math.floor(score / 5));
+
+            const minHeight = 20;
+            const maxHeight = GAME_HEIGHT - 40 - gap - minHeight;
+            const topHeight = Math.floor(Math.random() * (maxHeight - minHeight + 1)) + minHeight;
+
+            pipes.push({
+                x: GAME_WIDTH,
+                topHeight: topHeight,
+                bottomY: topHeight + gap,
+                passed: false
+            });
+        }
+
+        // Particle Effects
+        let particles = [];
+        function createParticles(x, y, count, color) {
+            for (let i = 0; i < count; i++) {
+                particles.push({
+                    x: x,
+                    y: y,
+                    vx: (Math.random() - 0.5) * 1.5,
+                    vy: (Math.random() - 0.5) * 1.5,
+                    life: 12 + Math.random() * 8,
+                    color: color
+                });
+            }
+        }
+
+        function updateParticles() {
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.life--;
+                if (p.life <= 0) particles.splice(i, 1);
+            }
+        }
+
+        function drawParticles() {
+            particles.forEach(p => {
+                ctx.fillStyle = p.color;
+                ctx.fillRect(Math.floor(p.x), Math.floor(p.y), 2, 2);
+            });
+        }
+
+        // Environment Graphics
+        let groundOffset = 0;
+        let clouds = [
+            { x: 10, y: 25, speed: 0.15 },
+            { x: 75, y: 45, speed: 0.1 },
+            { x: 130, y: 18, speed: 0.2 }
+        ];
+
+        function drawBackground() {
+            // Sky
+            ctx.fillStyle = '#38bdf8';
+            ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT - 40);
+
+            // Distant Skyline
+            ctx.fillStyle = '#7dd3fc';
+            ctx.fillRect(0, GAME_HEIGHT - 65, GAME_WIDTH, 25);
+            ctx.fillStyle = '#bae6fd';
+            for (let i = 0; i < GAME_WIDTH; i += 12) {
+                const h = (i % 5 + 1) * 3;
+                ctx.fillRect(i, GAME_HEIGHT - 40 - h, 10, h);
+            }
+
+            // Clouds
+            clouds.forEach(cloud => {
+                if (gameState === 'PLAYING') cloud.x -= cloud.speed;
+                if (cloud.x < -30) cloud.x = GAME_WIDTH + 10;
+
+                ctx.fillStyle = '#ffffff';
+                const cx = Math.floor(cloud.x);
+                const cy = Math.floor(cloud.y);
+                ctx.fillRect(cx + 4, cy, 12, 6);
+                ctx.fillRect(cx, cy + 2, 20, 4);
+            });
+        }
+
+        function drawGround() {
+            const groundY = GAME_HEIGHT - 40;
+            const config = MODE_SETTINGS[currentMode];
+
+            if (gameState === 'PLAYING') {
+                const currentSpeed = config.baseSpeed + Math.min(0.6, score * 0.015);
+                groundOffset = (groundOffset + currentSpeed) % 8;
+            }
+
+            ctx.fillStyle = '#22c55e';
+            ctx.fillRect(0, groundY, GAME_WIDTH, 6);
+            ctx.fillStyle = '#15803d';
+            ctx.fillRect(0, groundY + 6, GAME_WIDTH, 2);
+
+            ctx.fillStyle = '#eab308';
+            ctx.fillRect(0, groundY + 8, GAME_WIDTH, 32);
+
+            ctx.fillStyle = '#ca8a04';
+            for (let x = -groundOffset; x < GAME_WIDTH; x += 8) {
+                ctx.fillRect(x, groundY + 14, 4, 4);
+                ctx.fillRect(x + 4, groundY + 24, 4, 4);
+            }
+        }
+
+        function drawPipes() {
+            pipes.forEach(pipe => {
+                const px = Math.floor(pipe.x);
+
+                // Top Pipe
+                ctx.fillStyle = '#22c55e';
+                ctx.fillRect(px + 2, 0, pipeWidth - 4, pipe.topHeight);
+                ctx.fillStyle = '#4ade80';
+                ctx.fillRect(px + 3, 0, 3, pipe.topHeight);
+                ctx.fillStyle = '#15803d';
+                ctx.fillRect(px + pipeWidth - 5, 0, 3, pipe.topHeight);
+
+                ctx.fillStyle = '#22c55e';
+                ctx.fillRect(px, pipe.topHeight - 10, pipeWidth, 10);
+                ctx.fillStyle = '#86efac';
+                ctx.fillRect(px, pipe.topHeight - 10, pipeWidth, 2);
+                ctx.fillStyle = '#15803d';
+                ctx.fillRect(px, pipe.topHeight - 1, pipeWidth, 1);
+
+                // Bottom Pipe
+                const bHeight = GAME_HEIGHT - 40 - pipe.bottomY;
+                ctx.fillStyle = '#22c55e';
+                ctx.fillRect(px + 2, pipe.bottomY, pipeWidth - 4, bHeight);
+                ctx.fillStyle = '#4ade80';
+                ctx.fillRect(px + 3, pipe.bottomY, 3, bHeight);
+                ctx.fillStyle = '#15803d';
+                ctx.fillRect(px + pipeWidth - 5, pipe.bottomY, 3, bHeight);
+
+                ctx.fillStyle = '#22c55e';
+                ctx.fillRect(px, pipe.bottomY, pipeWidth, 10);
+                ctx.fillStyle = '#86efac';
+                ctx.fillRect(px, pipe.bottomY, pipeWidth, 2);
+                ctx.fillStyle = '#15803d';
+                ctx.fillRect(px, pipe.bottomY + 9, pipeWidth, 1);
+            });
+        }
+
+        function checkCollisions() {
+            const config = MODE_SETTINGS[currentMode];
+
+            if (bird.y + bird.height >= GAME_HEIGHT - 40) {
+                bird.y = GAME_HEIGHT - 40 - bird.height;
+                triggerGameOver();
+                return;
+            }
+            if (bird.y <= 0) {
+                bird.y = 0;
+                bird.velocity = 0;
+            }
+
+            const pad = config.padding;
+            const bx = bird.x + pad;
+            const by = bird.y + pad;
+            const bw = bird.width - pad * 2;
+            const bh = bird.height - pad * 2;
+
+            pipes.forEach(pipe => {
+                const px = pipe.x;
+                const pw = pipeWidth;
+
+                if (bx + bw > px && bx < px + pw) {
+                    if (by < pipe.topHeight || by + bh > pipe.bottomY) {
+                        triggerGameOver();
+                    }
+                }
+            });
+        }
+
+        function triggerGameOver() {
+            if (gameState === 'GAMEOVER') return;
+
+            gameState = 'GAMEOVER';
+            soundEngine.playHit();
+            createParticles(bird.x + bird.width / 2, bird.y + bird.height / 2, 12, '#ef4444');
+
+            const currentHigh = getHighScore(currentMode);
+            if (score > currentHigh) {
+                localStorage.setItem(MODE_SETTINGS[currentMode].storageKey, score.toString());
+                updateHighScoreDisplays();
+            }
+
+            finalScoreEl.textContent = score;
+            finalHighScoreEl.textContent = Math.max(score, currentHigh);
+
+            // Medals
+            if (score >= 30) {
+                medalIconEl.textContent = '🥇';
+                medalIconEl.className = "w-9 h-9 rounded-full border-2 border-amber-900 flex items-center justify-center text-base bg-yellow-300 shadow";
+            } else if (score >= 15) {
+                medalIconEl.textContent = '🥈';
+                medalIconEl.className = "w-9 h-9 rounded-full border-2 border-amber-900 flex items-center justify-center text-base bg-slate-300 shadow";
+            } else if (score >= 5) {
+                medalIconEl.textContent = '🥉';
+                medalIconEl.className = "w-9 h-9 rounded-full border-2 border-amber-900 flex items-center justify-center text-base bg-amber-600 shadow";
+            } else {
+                medalIconEl.textContent = '⚪';
+                medalIconEl.className = "w-9 h-9 rounded-full border-2 border-amber-900 flex items-center justify-center text-base bg-slate-200";
+            }
+
+            hudScreen.classList.add('hidden');
+            gameoverScreen.classList.remove('hidden');
+        }
+
+        function startGame(mode) {
+            currentMode = mode;
+            bird.y = 120;
+            bird.velocity = 0;
+            bird.rotation = 0;
+            pipes = [];
+            particles = [];
+            score = 0;
+            frameCount = 0;
+            currentScoreEl.textContent = score;
+            hudModeTagEl.textContent = MODE_SETTINGS[mode].name;
+
+            gameState = 'PLAYING';
+            startScreen.classList.add('hidden');
+            gameoverScreen.classList.add('hidden');
+            hudScreen.classList.remove('hidden');
+
+            soundEngine.init();
+            soundEngine.startMusic();
+            spawnPipe();
+        }
+
+        function returnToMainMenu() {
+            gameState = 'START';
+            gameoverScreen.classList.add('hidden');
+            hudScreen.classList.add('hidden');
+            startScreen.classList.remove('hidden');
+            updateHighScoreDisplays();
+        }
+
+        function update() {
+            frameCount++;
+
+            if (gameState === 'START') {
+                bird.y = 120 + Math.sin(frameCount * 0.08) * 4;
+                if (frameCount % 8 === 0) bird.frame = (bird.frame + 1) % 3;
+                return;
+            }
+
+            if (gameState === 'PLAYING') {
+                bird.update();
+                updateParticles();
+
+                const config = MODE_SETTINGS[currentMode];
+                // Dynamic difficulty: pipe speed scales with passed columns (+1 point)
+                const currentSpeed = config.baseSpeed + Math.min(0.6, score * 0.015);
+
+                for (let i = pipes.length - 1; i >= 0; i--) {
+                    pipes[i].x -= currentSpeed;
+
+                    if (!pipes[i].passed && pipes[i].x + pipeWidth < bird.x) {
+                        pipes[i].passed = true;
+                        score++;
+                        currentScoreEl.textContent = score;
+                        soundEngine.playScore();
+                        createParticles(bird.x, bird.y, 6, '#fef08a');
+                    }
+
+                    if (pipes[i].x < -pipeWidth) {
+                        pipes.splice(i, 1);
+                    }
+                }
+
+                // Spawn frequency slowly speeds up slightly with score
+                const spawnRate = Math.max(70, config.spawnInterval - Math.floor(score * 1.2));
+                if (frameCount % spawnRate === 0) {
+                    spawnPipe();
+                }
+
+                checkCollisions();
+            }
+        }
+
+        function render() {
+            ctx.clearRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+
+            drawBackground();
+            drawPipes();
+            drawGround();
+            drawParticles();
+            bird.draw();
+        }
+
+        function gameLoop() {
+            update();
+            render();
+            requestAnimationFrame(gameLoop);
+        }
+
+        function handleFlapInput(e) {
+            if (e) {
+                if (e.type === 'keydown' && e.code !== 'Space') return;
+                if (e.cancelable && e.type !== 'keydown') e.preventDefault();
+            }
+
+            if (gameState === 'PLAYING') {
+                bird.flap();
+            }
+        }
+
+        // Global Listeners
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'Space') handleFlapInput(e);
+        });
+
+        canvas.addEventListener('touchstart', handleFlapInput, { passive: false });
+        canvas.addEventListener('mousedown', (e) => {
+            if (e.button === 0) handleFlapInput(e);
+        });
+
+        // Mode Buttons on Main Menu
+        modeChillBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            startGame('CHILL');
+        });
+
+        modeInsaneBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            startGame('INSANE');
+        });
+
+        // Game Over Buttons
+        restartBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            startGame(currentMode);
+        });
+
+        menuBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            returnToMainMenu();
+        });
+
+        // Audio Toggle Handlers
+        toggleMusicBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            soundEngine.musicMuted = !soundEngine.musicMuted;
+            musicStatusEl.textContent = soundEngine.musicMuted ? 'ВЫКЛ' : 'ВКЛ';
+            if (!soundEngine.musicMuted) soundEngine.startMusic();
+        });
+
+        toggleSfxBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            soundEngine.sfxMuted = !soundEngine.sfxMuted;
+            sfxStatusEl.textContent = soundEngine.sfxMuted ? 'ВЫКЛ' : 'ВКЛ';
+        });
+
+        // Start Loop on Load
+        window.onload = function() {
+            gameLoop();
+        };
+    </script>
+</body>
+</html>
